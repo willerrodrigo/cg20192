@@ -12,8 +12,126 @@
 #include <stdio.h>
 #include <string>
 #include <cstring>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
 
-// Implement load triangle mesh
+// Global variables
+bool BACKGROUND_STATE = false;
+
+// Compile shader source code from text file format
+bool compileShader(const std::string & filename, GLenum type, GLuint & id) {
+    // Read from text file to string
+    std::ifstream file(filename, std::ifstream::in);
+
+    if (!file.is_open())
+        return false;
+
+    std::stringstream buffer;
+    std::string source;
+
+    buffer << file.rdbuf();
+    source = buffer.str();
+
+    // Create shader
+    GLuint shaderID = glCreateShader(type);
+
+    // Setup shader source code
+    const GLchar * src = source.data();
+    glShaderSource(shaderID, 1, &src, nullptr);
+
+    // Compile shader
+    glCompileShader(shaderID);
+
+    // Get compilation status
+    GLint status;
+    glGetShaderiv(shaderID, GL_COMPILE_STATUS, &status);
+
+    // Check compilation errors
+    if (status != GL_TRUE) {
+        // Get log message size of the compilation process
+        GLint size = 0;
+        glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &size);
+
+        std::string message;
+        message.resize(size);
+
+        // Get log message of the compilation process
+        glGetShaderInfoLog(shaderID, size, nullptr, (GLchar *)message.data());
+
+        // Print log message
+        std::cout << message << std::endl;
+
+        // Delete shader
+        glDeleteShader(shaderID);
+
+        return false;
+    }
+
+    // Return shader id
+    id = shaderID;
+
+    return true;
+}
+
+// Create shader program
+bool createProgram(const std::string & name, GLuint & id) {
+    GLuint vertexShaderID, fragmentShaderID;
+
+    // Load and compile vertex shader
+    if (!compileShader(name + ".vert", GL_VERTEX_SHADER, vertexShaderID))
+        return false;
+
+    // Load and compile fragment shader
+    if (!compileShader(name + ".frag", GL_FRAGMENT_SHADER, fragmentShaderID))
+        return false;
+
+    // Create shader program
+    GLuint programID = glCreateProgram();
+
+    // Attach compiled shaders to program
+    glAttachShader(programID, vertexShaderID);
+    glAttachShader(programID, fragmentShaderID);
+
+    // Link attached shaders to create an executable
+    glLinkProgram(programID);
+
+    // Delete compiled shaders
+    glDeleteShader(vertexShaderID);
+    glDeleteShader(fragmentShaderID);
+
+    // Get linkage status
+    GLint status;
+    glGetProgramiv(programID, GL_LINK_STATUS, &status);
+
+    // Check linkage errors
+    if (status != GL_TRUE) {
+        // Get log message size of the linkage process
+        GLint size = 0;
+        glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &size);
+
+        std::string message;
+        message.resize(size);
+
+        // Get log message of the linkage process
+        glGetProgramInfoLog(programID, size, nullptr, (GLchar *)message.data());
+
+        // Print log message
+        std::cout << message << std::endl;
+
+        // Delete shader program
+        glDeleteProgram(programID);
+
+        return false;
+    }
+
+    // Return shader program id
+    id = programID;
+
+    return true;
+}
+
+// Load triangle mesh from Wavefront OBJ file format
 void loadTriangleMesh(
 		const char * path, 
 		std::vector<glm::vec3> & out_vertices, 
@@ -35,15 +153,15 @@ void loadTriangleMesh(
 		}
 
 		while( 1 ){
-	
+
 			char lineHeader[128];
 			// read the first word of the line
 			int res = fscanf(file, "%s", lineHeader);
 			if (res == EOF)
 				break; // EOF = End Of File. Quit the loop.
-	
+
 			// else : parse lineHeader
-			
+
 			if ( strcmp( lineHeader, "v" ) == 0 ){
 				glm::vec3 vertex;
 				fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z );
@@ -79,32 +197,30 @@ void loadTriangleMesh(
 				char stupidBuffer[1000];
 				fgets(stupidBuffer, 1000, file);
 			}
-	
+
 		}
-	
+
 		// For each vertex of each triangle
 		for( unsigned int i=0; i<vertexIndices.size(); i++ ){
-	
+
 			// Get the indices of its attributes
 			unsigned int vertexIndex = vertexIndices[i];
 			unsigned int uvIndex = uvIndices[i];
 			unsigned int normalIndex = normalIndices[i];
-			
+
 			// Get the attributes thanks to the index
 			glm::vec3 vertex = temp_vertices[ vertexIndex-1 ];
 			glm::vec2 uv = temp_uvs[ uvIndex-1 ];
 			glm::vec3 normal = temp_normals[ normalIndex-1 ];
-			
+
 			// Put the attributes in buffers
 			out_vertices.push_back(vertex);
 			out_uvs     .push_back(uv);
 			out_normals .push_back(normal);
-		
+
 		}
 		fclose(file);
 };
-
-bool BACKGROUND_STATE = false;
 
 // Resize event
 void  resize(GLFWwindow* window, int width, int height){
@@ -121,24 +237,24 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int modifie
 int main(int argc, char** argv) {
 	glm::vec3 u(1.0f, 0, 0);
 	glm::vec3 v(0, 1.0f, 0);
-	
+
 	/* PONTOS E VETORES */
 	// float d = glm::dot(u, v);
 	// glm::vec3 c = glm::cross(u, v);
 	// glm::vec3 n = glm::normalize(u);
-	
+
 	// std::cout << d << std::endl;
 	// std::cout << glm::to_string(d) << std::endl;
-	
+
 	/* MATRIZES */
 	glm::mat3 m(  // COLUNA, e não LINHA (COLUNA MAJORITÁRIA)
 		1, 2, 3,  // first column
 		4, 5, 6,  // second column
 		7, 8, 9); // third column
-	
+
 	// std::cout << glm::to_string(m) << std::endl;
 	// std::cout << glm::to_string(m[0]) << std::endl;
-	
+
 	/* Initialize the library */
     if (!glfwInit())
     {
@@ -175,6 +291,62 @@ int main(int argc, char** argv) {
     	return -1;
 	}
 
+	// Create shaders
+	GLuint programID;
+	
+	if(!createProgram("../res/shaders/triangle", programID)){
+		glfwTerminate();
+    	
+    	std::cout << "Cannot create shader program." << std::endl;
+    	return -1;
+	}
+	
+	glUseProgram(programID);
+	
+	GLfloat vertices [] = {
+		-0.5f, -0.5f, 0.0f, // first vertex position attribute
+		 1.0f, 0.0f, 0.0f, // first vertex color attribute
+		 
+		 0.5f, -0.5f, 0.0f, // second vertex position attribute
+		 0.0f, 1.0f, 0.0f, // second vertex color attribute
+		 
+		 0.0f, 0.5f, 0.0f, // third vertex position attribute
+		 0.0f, 0.0f, 1.0f, // third vertex color attribute
+	};
+	
+	GLuint vao;
+	
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+	
+	GLuint vbo;
+	
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	
+	glVertexAttribPointer(
+		0,
+		3,
+		GL_FLOAT,
+		false,
+		6 * sizeof(GLfloat),
+		nullptr
+	);
+
+	glVertexAttribPointer(
+		1,
+		3,
+		GL_FLOAT,
+		false,
+		6 * sizeof(GLfloat),
+		(GLvoid *)(3 * sizeof(GLfloat))
+	);
+	
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
@@ -193,14 +365,18 @@ int main(int argc, char** argv) {
         glfwPollEvents();
     }
 
+	// DELETE BUFFER PREVIOUSLY CREATED
+	glDeleteVertexArrays(1, &vao);
+	glDeleteBuffers(1, &vbo);
+	
 	// Destroy window
 	glfwDestroyWindow(window);
-	
-	std::vector< glm::vec3 > vertices;
-	std::vector< glm::vec2 > uvs;
-	std::vector< glm::vec3 > normals;
-	loadTriangleMesh("../res/meshes/object.obj", vertices, uvs, normals);
-	
+
+	//std::vector< glm::vec3 > vertices;
+	//std::vector< glm::vec2 > uvs;
+	//std::vector< glm::vec3 > normals;
+	// loadTriangleMesh("../res/meshes/object.obj", vertices, uvs, normals);
+
     glfwTerminate();
 	return 0;
 }
