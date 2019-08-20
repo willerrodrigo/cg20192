@@ -430,6 +430,15 @@ void keyboard(
     
     if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT))
         MODEL = glm::rotate(MODEL, 0.1f, glm::vec3(0.0f, 1.0f, 0.0f));
+        
+    if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT))
+        MODEL = glm::translate(MODEL, glm::vec3(0.0f, 0.2f, 0.0f));
+        
+    if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT))
+        MODEL = glm::rotate(MODEL, 0.1f, glm::vec3(0.0f, -1.0f, 0.0f));
+        
+    if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT))
+        MODEL = glm::translate(MODEL, glm::vec3(0.0f, -0.2f, 0.0f));
 }
 
 int main(int argc, char ** argv) {
