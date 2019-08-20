@@ -129,28 +129,40 @@ size_t loadTriangleMesh(
         GLuint & vao,
         GLuint & vbo) {
     // Triangle description
-    GLfloat vertices[] = {
-        -0.5f, -0.5f, 0.0f, // First vertex position
-         1.0f,  0.0f, 0.0f, // First vertex color
+    /* GLfloat vertices[] = {
+    	// triangle 0
+        0.0f, 0.0f, 0.0f, // First vertex position v0
+        0.0f,  0.0f, 1.0f, // First vertex color vn0
          
-         0.5f, -0.5f, 0.0f, // Second vertex position
-         0.0f,  1.0f, 0.0f, // Second vertex color
+        1.0f,  0.0f, 0.0f, // Second vertex position v1
+        0.0f,  0.0f, 1.0f, // Second vertex color vn0
+        
+        1.0f,  1.0f, 0.0f, // Third vertex position v2
+        0.0f,  0.0f, 1.0f, // Third vertex color vn0
+        
+        // triangle 1
+        0.0f, 0.0f, 0.0f, // First vertex position v0
+        0.0f,  0.0f, 1.0f, // First vertex color vn0
          
-         0.0f,  0.5f, 0.0f, // Third vertex position
-         0.0f,  0.0f, 1.0f, // Third vertex color
-    };
+        1.0f,  1.0f, 0.0f, // Second vertex position v2
+        0.0f,  0.0f, 1.0f, // Second vertex color vn0
+        
+        0.0f, 1.0f, 0.0f, // Second vertex position v3
+        0.0f,  0.0f, 1.0f, // Second vertex color vn0
+    }; */
     
-    std::vector<float> data;
+    // LOAD DO CUBO COM TEXTURA E NORMAIS
+    // std::vector<float> data;
     
-    for (size_t i = 0; i < positionIndices.size() / 3; i++) {
+    /* for (size_t i = 0; i < positionIndices.size() / 3; i++) {
 		size_t triangleIndex = i;
  	   
 	    glm::vec3 p0 = positions[positionIndices[triangleIndex * 3]];
 	    glm::vec3 n0 = normals[normalIndices[triangleIndex * 3]];
 	    glm::vec2 t0 = textureCoordinates[textureCoordinateIndices[triangleIndex * 3]];
 	
-	    data.push_back(p0.x); data.push_back(p0.y); data.push_back(p0.z);
-	    data.push_back(n0.x); data.push_back(n0.y); data.push_back(n0.z);
+	   data.push_back(p0.x); data.push_back(p0.y); data.push_back(p0.z);
+	   data.push_back(n0.x); data.push_back(n0.y); data.push_back(n0.z);
 	    data.push_back(t0.x); data.push_back(t0.y);
 	
 	    glm::vec3 p1 = positions[positionIndices[triangleIndex * 3 + 1]];
@@ -163,13 +175,75 @@ size_t loadTriangleMesh(
 	
 	    glm::vec3 p2 = positions[positionIndices[triangleIndex * 3 + 2]];
 	    glm::vec3 n2 = normals[normalIndices[triangleIndex * 3 + 2]];
-	    glm::vec2 t2 = textureCoordinates[textureCoordinateIndices[triangleIndex * 3 + 2]];
+        glm::vec2 t2 = textureCoordinates[textureCoordinateIndices[triangleIndex * 3 + 2]];
 	
 	    data.push_back(p2.x); data.push_back(p2.y); data.push_back(p2.z);
 	    data.push_back(n2.x); data.push_back(n2.y); data.push_back(n2.z);
 	    data.push_back(t2.x); data.push_back(t2.y);
+	} */
+	
+	// LOAD DO OBJ CALCULANDO A FACETA QUANDO NÃO TIVER TEXTURA OU NORMAL
+	struct Vertex {
+		glm::vec3 position;
+		glm::vec3 normal;
+		glm::vec2 textureCoordinate;
+	};
+	
+	bool hasNormals = normalIndices.size() > 0;
+	bool hasTextureCoordinates = textureCoordinateIndices.size() > 0;
+	
+	std::vector<Vertex> vertices;
+	
+	for (size_t i = 0; i < positionIndices.size() / 3; i++) {
+		Vertex triangleVertices[3];
+		
+ 		for(size_t j=0; j < 3; j++) {
+ 			Vertex & vertex = triangleVertices[j];
+ 			vertex.position = positions[positionIndices[i * 3 + j]];
+		}
+		
+		if(hasNormals){
+			for(size_t j=0; j < 3; j++) {
+	 			Vertex & vertex = triangleVertices[j];
+	 			vertex.normal = normals[normalIndices[i * 3 + j]];
+			}
+		}
+		else {
+			Vertex & vertex0 = triangleVertices[0];
+			Vertex & vertex1 = triangleVertices[1];
+			Vertex & vertex2 = triangleVertices[2];
+			
+			glm::vec3 u = vertex1.position - vertex0.position;
+			glm::vec3 v = vertex2.position - vertex0.position;
+			
+			glm::vec3 n = glm::normalize(glm::cross(u, v));
+			
+			vertex0.normal = n;
+			vertex1.normal = n;
+			vertex2.normal = n;
+		}
+		
+		if(hasTextureCoordinates){
+			for(size_t j=0; j < 3; j++) {
+	 			Vertex & vertex = triangleVertices[j];	
+	 			vertex.textureCoordinate = textureCoordinates[textureCoordinateIndices[i * 3 + j]];
+			}
+		}
+		else {
+			Vertex & vertex0 = triangleVertices[0];
+			Vertex & vertex1 = triangleVertices[1];
+			Vertex & vertex2 = triangleVertices[2];
+			
+			vertex0.textureCoordinate = glm::vec2(0.0f, 0.0f);
+			vertex1.textureCoordinate = glm::vec2(1.0f, 0.0f);
+			vertex2.textureCoordinate = glm::vec2(0.0f, 1.0f);
+		}
+		
+		
+		for(size_t i=0; i < 3; i++)
+			vertices.push_back(triangleVertices[i]);
 	}
-    
+	
     // Create and bind vertex array object
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -181,8 +255,10 @@ size_t loadTriangleMesh(
     // Copy vertex attribute data to vertex buffer object
     glBufferData(
         GL_ARRAY_BUFFER,
-        data.size() * sizeof(float),
-        data.data(),
+        // sizeof(vertices),
+        vertices.size() * sizeof(Vertex),
+        // vertices,
+		vertices.data(),
         usage);
     
     // Define position attribute to shader program
@@ -197,7 +273,7 @@ size_t loadTriangleMesh(
     // Enable position attribute to shader program
     glEnableVertexAttribArray(0);
     
-    // Define color attribute to shader program
+    // Define normal attribute to shader program
     glVertexAttribPointer(
         1,
         3,
@@ -206,23 +282,24 @@ size_t loadTriangleMesh(
         8 * sizeof(GLfloat),
         (const GLvoid *)(3 * sizeof(GLfloat)));
     
-    // Enable color attribute to shader program
+    // Enable normal attribute to shader program
     glEnableVertexAttribArray(1);
     
     // Define texture attribute to shader program
     glVertexAttribPointer(
         2,
         2,
-        GL_FLOAT,
+       	GL_FLOAT,
         false,
         8 * sizeof(GLfloat),
         (const GLvoid *)(6 * sizeof(GLfloat)));
 
-    // Enable color attribute to shader program
+    // Enable texture attribute to shader program
     glEnableVertexAttribArray(2);
     
     // Return vertex count or three times the triangle count
     return positionIndices.size();
+    // return 6;
 }
 
 // Compile shader source code from text file format
@@ -466,7 +543,7 @@ int main(int argc, char ** argv) {
     std::vector<size_t> textureCoordinateIndices;
     
     readTriangleMesh(
-        "../res/meshes/cube.obj",
+        "../res/meshes/bunny.obj",
         positions,
         normals,
         textureCoordinates,
@@ -490,7 +567,7 @@ int main(int argc, char ** argv) {
     
     // Setup view matrix
     glm::mat4 view = glm::lookAt(
-        glm::vec3(0.0f, 0.0f, 5.0f),
+        glm::vec3(0.0f, 0.0f, 20.0f),
         glm::vec3(0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f));
     
