@@ -431,14 +431,71 @@ void keyboard(
     if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT))
         MODEL = glm::rotate(MODEL, 0.1f, glm::vec3(0.0f, 1.0f, 0.0f));
         
-    if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT))
+     if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT))
         MODEL = glm::translate(MODEL, glm::vec3(0.0f, 0.2f, 0.0f));
-        
+    
     if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT))
         MODEL = glm::rotate(MODEL, 0.1f, glm::vec3(0.0f, -1.0f, 0.0f));
-        
+    
     if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT))
         MODEL = glm::translate(MODEL, glm::vec3(0.0f, -0.2f, 0.0f));
+    
+    if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT))
+        MODEL = glm::rotate(MODEL, 0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+    
+    if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT))
+        MODEL = glm::rotate(MODEL, 0.1f, glm::vec3(-1.0f, 0.0f, 0.0f));
+    
+    if (key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT))
+        MODEL = glm::scale(MODEL, glm::vec3(2.0f, 2.0f, 1.0f));
+    
+    if (key == GLFW_KEY_N && (action == GLFW_PRESS || action == GLFW_REPEAT))
+        MODEL = glm::scale(MODEL, glm::vec3(0.5f, 0.5f, 1.0f));
+}
+
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos){
+	std::cout <<"MOUSE POS: " << xpos << ","<< ypos << std::endl;
+	MODEL = glm::translate(glm::mat4(1.0f), glm::vec3((float)(xpos*0.02),(float)(ypos*0.02),0.0f));
+}
+
+void cursor_enter_callback(GLFWwindow* window, int entered)
+{
+	// The cursor entered the content area of the window
+    if (entered)
+    {
+		if (glfwGetWindowAttrib(window, GLFW_HOVERED))
+		{
+		     MODEL = glm::translate(MODEL, glm::vec3(5.0f, 0.0f, 0.0f)); 
+		}
+    }
+    else
+    {
+        // The cursor left the content area of the window
+    }
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	if(yoffset == -1){
+		
+		MODEL = glm::scale(MODEL, glm::vec3(2.0f, 2.0f, 1.0f));
+	}
+	else {
+		MODEL = glm::scale(MODEL, glm::vec3(0.5f, 0.5f, 1.0f));
+	}
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) 
+	{
+     	return;
+  	}
+
+  	double x;
+    double y;
+    glfwGetCursorPos(window, &x, &y);
+    MODEL = glm::translate(glm::mat4(1.0f), glm::vec3((float)(x*0.02),(float)(y*0.02),0.0f));
 }
 
 int main(int argc, char ** argv) {
@@ -501,7 +558,7 @@ int main(int argc, char ** argv) {
     glfwWindowHint(GLFW_SAMPLES, 16);
 
     // Create window
-    GLFWwindow * window = glfwCreateWindow(800, 600, "Window", nullptr, nullptr);
+    GLFWwindow * window = glfwCreateWindow(1024, 768, "Window", nullptr, nullptr);
 
     // Check if cannot create window
     if (window == nullptr) {
@@ -514,7 +571,13 @@ int main(int argc, char ** argv) {
     // Register event callbacks
     glfwSetFramebufferSizeCallback(window, resize);
     glfwSetKeyCallback(window, keyboard);
-
+    glfwSetInputMode(window, GLFW_CURSOR,  GLFW_CURSOR_NORMAL);
+	glfwSetCursorPosCallback (window, cursor_position_callback);
+	//glfwSetCursorEnterCallback (window, cursor_enter_callback);
+	glfwSetScrollCallback(window, scroll_callback);
+	glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
+	
     // Setup window context
     glfwMakeContextCurrent(window);
 
@@ -552,7 +615,7 @@ int main(int argc, char ** argv) {
     std::vector<size_t> textureCoordinateIndices;
     
     readTriangleMesh(
-        "../res/meshes/bunny.obj",
+        "../res/meshes/triangle.obj",
         positions,
         normals,
         textureCoordinates,
@@ -581,7 +644,7 @@ int main(int argc, char ** argv) {
         glm::vec3(0.0f, 1.0f, 0.0f));
     
     // Initialize projection matrix and viewport
-    resize(window, 800, 600);
+    resize(window, 1024, 768);
     
     // Render loop
     while (!glfwWindowShouldClose(window)) {
